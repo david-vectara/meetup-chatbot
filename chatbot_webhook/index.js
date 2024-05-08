@@ -20,6 +20,19 @@ const MEETUP_CORPUS = "meetup-presentations"
 const actionButtons = []
 
 async function startServer() {
+    // Temporarily test this string
+    const testString = "action=meetup-info"
+    const res = [
+        RegExp(".*"),
+        RegExp("[a-z]+=.*"),
+        RegExp("([\\w]+)=(.*)")
+    ];
+    res.forEach(re => {
+        console.log("Testing " + re.source + " on " + testString + " which is [" + re.test(testString) + "]");
+    });
+    console.log("Testing match capability: " + testString.match(res[2])[2])
+
+
     client = await new vectara.Factory().build();
 
     const corporaResp = await client.adminService.listCorpora("meetup-");
@@ -38,8 +51,6 @@ async function startServer() {
             action_corpus_id = corpus.id;
         }
     });
-
-    console.log("Action is undefined")
 
     const queryFacade = client.queryFacade;
     const queryService = client.queryService;
@@ -60,7 +71,7 @@ async function startServer() {
                     actionButtons.push({
                         type: "postback",
                         title: document.id,
-                        value: metadata.value
+                        value: "action=" + metadata.value
                     });
                 }
 
@@ -96,8 +107,8 @@ app.post('/', async (req, res) => {
     }
 
     // print request body
-    console.log(req.body);
-    console.log(req.query);
+    //console.log(req.body);
+    //console.log(req.query);
 
     console.info("We have a query of type [" + req.body.attributes.queryType + "]")
     if (req.body.attributes.queryType === "Upload" && req.body.attributes.attachment !== 'undefined') {
@@ -130,9 +141,39 @@ app.post('/', async (req, res) => {
             ]
         });
     } else if (req.body.attributes.queryType === "general") {
-        console.log("Asking question: " + req.body.message)
+
         const queryFacade = client.queryFacade;
         const queryService = client.queryService;
+
+        const re = RegExp("([\\w]+)=([^=]+)")
+        // The entry here will be after a quick response has been selected
+        if (req.body.message !== undefined && re.test(req.body.message)) {
+            const matches = req.body.message.match(re);
+            const key = matches[1];
+            const value = matches[2];
+            console.log("Found command with [" + key + "] = [" + value + "]");
+            if (key === "action") {
+                console.log("We have an action!! " + value);
+
+                // Now we set the action on a return attribute.
+                const data = {
+                    responses: [
+                        {
+                            attributes: {
+                                "action": value
+                            }
+                        },
+                    ]
+                }
+                res.json(data);
+                return;
+            }
+
+
+        } else {
+            console.log("Asking question: " + req.body.message)
+        }
+
 
         if (req.body.attributes.action === undefined) {
             const data = {
