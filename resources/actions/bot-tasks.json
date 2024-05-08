@@ -1,0 +1,4 @@
+{"task": "General Information", "key": "general", "description": "Provide general information about DataEngBytes", "hidden": "false"}
+{"task": "Meetup Information", "key": "meetup-info", "description": "Provide information about meetups", "hidden": "false"}
+{"task": "Submit Presentation", "key": "meetup-submission", "description": "Submit a talk or presentation for a meetup", "hidden": "false"}
+{"task": "Provide General Information", "key": "overview", "description": "Provides an overview of tasks", "hidden": "true"}

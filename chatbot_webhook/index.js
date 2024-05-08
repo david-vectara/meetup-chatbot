@@ -11,22 +11,65 @@ const app = express().use(bodyParser.json()); // creates http server
 const token = 'sticky_tap3_4nd_Gloo'; // type your verification token here
 
 let client = undefined;
-let mckinsey_corpusId = undefined;
-const GUARDRAILS_CORPUS_NAME = "prompt-guardrails"
-
+let general_corpus_id = undefined;
+let meetup_corpus_id = undefined;
+let action_corpus_id = undefined;
+const GENERAL_CORPUS = "meetup-general"
+const ACTION_CORPUS = "meetup-actions"
+const MEETUP_CORPUS = "meetup-presentations"
+const actionButtons = []
 
 async function startServer() {
     client = await new vectara.Factory().build();
 
-    const corporaResp = await client.adminService.listCorpora(GUARDRAILS_CORPUS_NAME);
+    const corporaResp = await client.adminService.listCorpora("meetup-");
 
     corporaResp.corpus.forEach((corpus) => {
-        console.info("Found corpus [" + corpus.name + "]");
-        if (corpus.name === GUARDRAILS_CORPUS_NAME) {
-            console.info("We found target corpus [" + corpus.id + "]")
-            mckinsey_corpusId = corpus.id;
+        if (corpus.name === GENERAL_CORPUS) {
+            console.info("We found general corpus [" + corpus.id + "]")
+            general_corpus_id = corpus.id;
+        }
+        if (corpus.name === MEETUP_CORPUS) {
+            console.info("We found presentation corpus [" + corpus.id + "]")
+            meetup_corpus_id = corpus.id;
+        }
+        if (corpus.name === ACTION_CORPUS) {
+            console.info("We found action corpus [" + corpus.id + "]")
+            action_corpus_id = corpus.id;
         }
     });
+
+    console.log("Action is undefined")
+
+    const queryFacade = client.queryFacade;
+    const queryService = client.queryService;
+    const queryBody = queryFacade.buildTemplate("What can we do", action_corpus_id)
+    queryBody.summary = []
+    const batchRequest = {
+        query: [
+            queryBody
+        ]
+    }
+
+    const actionResponse = await queryService.query(batchRequest)
+    actionResponse.responseSet.forEach(response => {
+        response.document.forEach(document => {
+            document.metadata.forEach(metadata => {
+                if (metadata.name === "action-key") {
+                    console.info("Adding action [" + metadata.value + "]")
+                    actionButtons.push({
+                        type: "postback",
+                        title: document.id,
+                        value: metadata.value
+                    });
+                }
+
+            })
+
+        })
+
+    })
+
 
     console.info("Post-Initialization of client");
 
@@ -62,7 +105,7 @@ app.post('/', async (req, res) => {
         const cdnPath = req.body.attributes.attachment;
         console.log("CDN Path is: " + cdnPath);
         const splitPath = cdnPath.split("/");
-        const localFile = splitPath[splitPath.length-1];
+        const localFile = splitPath[splitPath.length - 1];
         console.log("Local file is: " + localFile)
 
         const file = fs.createWriteStream(localFile);
@@ -77,36 +120,54 @@ app.post('/', async (req, res) => {
                 console.log("Download Completed");
             });
         });
-        res.json({responses: [
+        res.json({
+            responses: [
                 {
                     type: 'text',
                     message: "Thanks, I received the file " + localFile
                 }
 
-            ]});
+            ]
+        });
     } else if (req.body.attributes.queryType === "general") {
         console.log("Asking question: " + req.body.message)
         const queryFacade = client.queryFacade;
-        try {
-            const response = await queryFacade.simple(req.body.message, mckinsey_corpusId);
+        const queryService = client.queryService;
 
-            const summaryText = response.summary[0].text;
-            console.log("Summary text was: " + summaryText)
+        if (req.body.attributes.action === undefined) {
             const data = {
                 responses: [
                     {
-                        type: 'text',
-                        message: summaryText
+                        type: "quickReplies",
+                        title: "Please select an action",
+                        buttons: actionButtons
                     }
-
                 ]
             }
-            console.log("Returning data")
             res.json(data);
-        } catch (e) {
-            console.error("Unexpected error: " + e.message)
-        }
 
+        } else {
+
+            try {
+                const response = await queryFacade.simple(req.body.message, general_corpus_id);
+
+                const summaryText = response.summary[0].text;
+                console.log("Summary text was: " + summaryText)
+                const data = {
+                    responses: [
+                        {
+                            type: 'text',
+                            message: summaryText
+                        }
+
+                    ]
+                }
+                console.log("Returning data")
+                res.json(data);
+            } catch (e) {
+                console.error("Unexpected error: " + e.message)
+            }
+        }
     } else {
 
         console.info("Retrieving Corpora");
