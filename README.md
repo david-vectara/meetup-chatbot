@@ -1,4 +1,4 @@
-![Vectara Logo](resources/images/vectara-logo.png)
+![Vectara Logo](resources/images/vectara-logo.svg)
 
 # Vectara Meetup Chatbot
 
@@ -17,7 +17,7 @@ The notebooks are in the notebooks folder.
 ## Features and Roadmap
 
 1. Corpus Creation: Done, embedded in notebooks
-2. Filter Attributes: Done, see [02 Presentation Corpus](resources/notebooks/02%20Presentation%20Corpus.ipynb)
+2. Filter Attributes: Done, see [02 Presentation Corpus](notebooks/02%20Presentation%20Corpus.ipynb)
 3. Data Loading: Done, each notebook loads it's data.
 4. Crawling: Outstanding; currently data is static in repo
 5. Webhook: Partial: working with Chatbot.com parameters/flow
